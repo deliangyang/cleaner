@@ -1,0 +1,3 @@
+# 使用 6.4.x 可避免对 libxcb-cursor0 的依赖（Qt 6.5+ 需要）
+# 若已安装 libxcb-cursor0，可改为 PyQt6>=6.5.0
+PyQt6>=6.4.0,<6.5.0
