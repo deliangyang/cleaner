@@ -10,7 +10,7 @@ warnings.filterwarnings("ignore", category=DeprecationWarning, message=".*sipPyT
 if "QT_QPA_PLATFORM_THEME" not in os.environ:
     os.environ.setdefault("QT_QPA_PLATFORM_THEME", "qt")
 
-from PyQt6.QtWidgets import QApplication
+from PyQt5.QtWidgets import QApplication
 
 from ui.main_window import MainWindow
 
@@ -20,7 +20,7 @@ def main():
     app.setApplicationName("大文件清理助手")
     win = MainWindow()
     win.show()
-    sys.exit(app.exec())
+    sys.exit(app.exec_())
 
 
 if __name__ == "__main__":

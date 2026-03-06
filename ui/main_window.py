@@ -2,8 +2,9 @@
 import os
 import re
 from pathlib import Path
+from typing import Optional, List
 
-from PyQt6.QtWidgets import (
+from PyQt5.QtWidgets import (
     QMainWindow,
     QWidget,
     QVBoxLayout,
@@ -22,8 +23,8 @@ from PyQt6.QtWidgets import (
     QAbstractItemView,
     QGroupBox,
 )
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QAction
+from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import QAction
 
 from scanner import LargeFileInfo, DEFAULT_AGGREGATE_DIR_NAMES
 from .widgets import SizeSortTableWidget
@@ -38,9 +39,9 @@ class MainWindow(QMainWindow):
         self.setMinimumSize(900, 560)
         self.resize(1000, 620)
 
-        self.scan_worker: ScanWorker | None = None
-        self.delete_worker: DeleteWorker | None = None
-        self.results: list[LargeFileInfo] = []
+        self.scan_worker: Optional[ScanWorker] = None
+        self.delete_worker: Optional[DeleteWorker] = None
+        self.results: List[LargeFileInfo] = []
 
         central = QWidget()
         self.setCentralWidget(central)
@@ -131,9 +132,9 @@ class MainWindow(QMainWindow):
         self.table = SizeSortTableWidget()
         self.table.setColumnCount(5)
         self.table.setHorizontalHeaderLabels(["类型", "文件名", "大小", "路径", "所在目录"])
-        self.table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeMode.Stretch)
-        self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
-        self.table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.table.horizontalHeader().setSectionResizeMode(3, QHeaderView.Stretch)
+        self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.table.setContextMenuPolicy(Qt.CustomContextMenu)
         self.table.customContextMenuRequested.connect(self._on_table_context_menu)
         self.table.setSortingEnabled(True)
         layout.addWidget(self.table)
@@ -175,7 +176,7 @@ class MainWindow(QMainWindow):
         row = 0
         for i in range(self.table.rowCount()):
             size_item = self.table.item(i, 2)
-            if size_item and (size_item.data(Qt.ItemDataRole.UserRole) or 0) < info.size:
+            if size_item and (size_item.data(Qt.UserRole) or 0) < info.size:
                 row = i
                 break
         else:
@@ -184,7 +185,7 @@ class MainWindow(QMainWindow):
         self.table.setItem(row, 0, QTableWidgetItem("目录" if info.is_aggregate_dir else "文件"))
         self.table.setItem(row, 1, QTableWidgetItem(info.name))
         size_item = QTableWidgetItem(info.size_human)
-        size_item.setData(Qt.ItemDataRole.UserRole, info.size)
+        size_item.setData(Qt.UserRole, info.size)
         self.table.setItem(row, 2, size_item)
         self.table.setItem(row, 3, QTableWidgetItem(info.path))
         self.table.setItem(row, 4, QTableWidgetItem(info.directory))
@@ -205,9 +206,9 @@ class MainWindow(QMainWindow):
     def _update_count(self):
         total = self.table.rowCount()
         visible = sum(1 for i in range(total) if not self.table.isRowHidden(i))
-        total_bytes = sum(self.table.item(i, 2).data(Qt.ItemDataRole.UserRole) or 0 for i in range(total))
+        total_bytes = sum(self.table.item(i, 2).data(Qt.UserRole) or 0 for i in range(total))
         visible_bytes = sum(
-            self.table.item(i, 2).data(Qt.ItemDataRole.UserRole) or 0
+            self.table.item(i, 2).data(Qt.UserRole) or 0
             for i in range(total) if not self.table.isRowHidden(i)
         )
         def fmt(b):
@@ -226,7 +227,8 @@ class MainWindow(QMainWindow):
         menu = QMenu(self)
         index = self.table.indexAt(pos)
         row = index.row() if index.isValid() else -1
-        is_dir_row = row >= 0 and (t := self.table.item(row, 0)) and t.text() == "目录"
+        t = self.table.item(row, 0) if row >= 0 else None
+        is_dir_row = t is not None and t.text() == "目录"
         open_dir = QAction("打开所在目录", self)
         open_dir.triggered.connect(self._open_selected_directory)
         menu.addAction(open_dir)
@@ -237,7 +239,7 @@ class MainWindow(QMainWindow):
         delete_action = QAction("删除选中", self)
         delete_action.triggered.connect(self._on_delete_selected)
         menu.addAction(delete_action)
-        menu.exec(self.table.viewport().mapToGlobal(pos))
+        menu.exec_(self.table.viewport().mapToGlobal(pos))
 
     def _open_selected_directory(self):
         row = self.table.currentRow()
@@ -311,16 +313,16 @@ class MainWindow(QMainWindow):
             msg += "\n\n" + "\n".join(Path(p).name for p in paths)
         reply = QMessageBox.question(
             self, "确认删除", msg,
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No,
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
         )
-        if reply != QMessageBox.StandardButton.Yes:
+        if reply != QMessageBox.Yes:
             return
         self.delete_btn.setEnabled(False)
         progress = QProgressDialog("正在准备删除...", "取消", 0, n, self)
         progress.setWindowTitle("删除中")
         progress.setMinimumDuration(0)
-        progress.setWindowModality(Qt.WindowModality.WindowModal)
+        progress.setWindowModality(Qt.WindowModal)
         progress.setValue(0)
 
         def on_progress(current: int, total: int, path: str):

@@ -5,7 +5,7 @@
 import os
 from pathlib import Path
 from dataclasses import dataclass
-from typing import Iterator, Callable, Optional
+from typing import Iterator, Callable, Optional, Set
 
 # 默认作为汇总的目录名（不递归列出子文件，只显示该目录总大小）
 DEFAULT_AGGREGATE_DIR_NAMES = {
@@ -64,8 +64,8 @@ def scan_directory(
     min_size_mb: float = 10.0,
     progress_callback: Optional[Callable[[str], None]] = None,
     cancel_check: Optional[Callable[[], bool]] = None,
-    aggregate_dir_names: Optional[set[str]] = None,
-    exclude_paths: Optional[set[str]] = None,
+    aggregate_dir_names: Optional[Set[str]] = None,
+    exclude_paths: Optional[Set[str]] = None,
 ) -> Iterator[LargeFileInfo]:
     """
     递归扫描目录，yield 大于 min_size_mb MB 的文件；
